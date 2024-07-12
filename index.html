@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Captura de Números con OCR en el Navegador</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #3a3e54;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 20px;
+            background-color: #ffffff;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+
+        .header {
+            background-color: #2bc8c8;
+            color: black;
+            padding: 10px;
+            border-radius: 10px 10px 0 0;
+            margin-bottom: 20px;
+            cursor: pointer; /* Agregar cursor apuntador */
+        }
+
+        #video-container {
+            width: 100%;
+            max-width: 500px; /* Ancho máximo del contenedor de video */
+            height: 300px; /* Altura del contenedor de video */
+            margin: 0 auto 20px; /* Margen inferior */
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        #video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover; /* Para ajustar la imagen del video */
+        }
+
+        #results {
+            background-color: #ffffff;
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 20px;
+            text-align: left;
+        }
+
+        .result-item {
+            margin-bottom: 10px;
+            padding: 10px;
+            background-color: #f0f0f0;
+            border-radius: 5px;
+            word-wrap: break-word;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="header" onclick="captureImage()">Captura de Números</h1>
+        <div id="video-container">
+            <video id="video" autoplay playsinline></video>
+        </div>
+        <div id="results">
+            <h2>Resultados del OCR:</h2>
+            <div id="results-list"></div>
+        </div>
+    </div>
+
+    <script src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js'></script>
+    <script>
+        const video = document.getElementById('video');
+        const resultsContainer = document.getElementById('results');
+        const resultsList = document.getElementById('results-list');
+
+        // Función para inicializar la cámara
+        async function initCamera() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                video.srcObject = stream;
+            } catch (err) {
+                console.error('Error al acceder a la cámara:', err);
+            }
+        }
+
+        // Capturar imagen desde la cámara
+        async function captureImage() {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            const imageUrl = canvas.toDataURL('image/png');
+
+            try {
+                // Realizar OCR
+                const { data: { text } } = await Tesseract.recognize(imageUrl, 'eng', {
+                    tessedit_char_whitelist: '0123456789',
+                });
+                const trimmedText = text.trim();
+
+                // Mostrar resultados
+                resultsContainer.style.display = 'block';
+                const resultItem = document.createElement('div');
+                resultItem.classList.add('result-item');
+                resultItem.textContent = trimmedText;
+                resultsList.innerHTML = ''; // Limpiar resultados anteriores
+                resultsList.appendChild(resultItem);
+                copyToClipboard(trimmedText);
+            } catch (error) {
+                console.error('Error al realizar OCR:', error);
+            }
+        }
+
+        // Función para copiar texto al portapapeles
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text)
+                .then(() => console.log('Texto copiado al portapapeles:', text))
+                .catch(err => console.error('Error al copiar al portapapeles:', err));
+        }
+
+        // Inicializar la cámara al cargar la página
+        window.onload = function() {
+            initCamera();
+        };
+
+    </script>
+</body>
+</html>
